@@ -5,8 +5,17 @@ import { Card, CardContent } from "@/components/ui/card"
 import { PLATFORM_LABELS, PLATFORM_ORDER } from "./constants/social.constants"
 import { InputForm, SocialCard } from "./components"
 import { useSocialData } from "./hooks/useSocialData"
+import type { SocialRequestBody } from "./types/social.types"
 
-export function SocialDashboard() {
+type SocialDashboardProps = {
+  initialQueries?: SocialRequestBody | null
+  showInputForm?: boolean
+}
+
+export function SocialDashboard({
+  initialQueries = null,
+  showInputForm = true,
+}: SocialDashboardProps) {
   const {
     data,
     platformErrors,
@@ -18,19 +27,22 @@ export function SocialDashboard() {
     isFetching,
     submitQuery,
     refresh,
-  } = useSocialData()
+  } = useSocialData(initialQueries)
 
   const cardsAreLoading = isLoading || (isFetching && !requestError)
 
   return (
     <section className="space-y-6">
-      <InputForm
-        onSubmit={submitQuery}
-        onRefresh={refresh}
-        disabled={isLoading}
-        canRefresh={hasSubmitted}
-        validationError={validationError}
-      />
+      {showInputForm ? (
+        <InputForm
+          onSubmit={submitQuery}
+          onRefresh={refresh}
+          disabled={isLoading}
+          canRefresh={hasSubmitted}
+          validationError={validationError}
+          initialQueries={submittedQueries || undefined}
+        />
+      ) : null}
 
       {!hasSubmitted ? (
         <Card className="border-dashed border-border/80 bg-background/70">

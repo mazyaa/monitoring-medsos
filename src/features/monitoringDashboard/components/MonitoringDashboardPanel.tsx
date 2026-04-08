@@ -1,5 +1,8 @@
-import { Text, View } from "@/components/reactbits/primitives"
+"use client"
 
+import { useMemo, useState } from "react"
+
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type {
   MonitoredAccount,
@@ -13,6 +16,7 @@ type MonitoringDashboardPanelProps = {
   topPosts: MonitoredPost[]
 }
 
+const ACCOUNTS_PER_PAGE = 8
 function formatNumber(value: number): string {
   return new Intl.NumberFormat("en-US", { notation: "compact" }).format(value)
 }
@@ -25,52 +29,26 @@ function formatDate(value: string | null): string {
   return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(value))
 }
 
-function getPlatformAccent(platform: string): string {
-  if (platform === "youtube") {
-    return "bg-red-100 text-red-700 border-red-200"
-  }
-
-  if (platform === "instagram") {
-    return "bg-pink-100 text-pink-700 border-pink-200"
-  }
-
-  if (platform === "tiktok") {
-    return "bg-sky-100 text-sky-700 border-sky-200"
-  }
-
-  return "bg-slate-100 text-slate-700 border-slate-200"
-}
-
 export function MonitoringDashboardPanel({
-  platformBreakdown,
   accounts,
   topPosts,
 }: MonitoringDashboardPanelProps) {
-  return (
-    <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-      <Card className="border-slate-300/70 bg-white/80 shadow-sm">
-        <CardHeader>
-          <CardTitle>Platform Mapping</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-3">
-            {platformBreakdown.map((platform) => (
-              <View key={platform.platform} style={{ display: "flex", rowGap: 8 }}>
-                <div className={`inline-flex w-fit rounded-full border px-2 py-1 text-xs font-semibold capitalize ${getPlatformAccent(platform.platform)}`}>
-                  {platform.platform}
-                </div>
-                <Text style={{ fontSize: 13, color: "#475569" }}>Accounts: {platform.accountCount}</Text>
-                <Text style={{ fontSize: 13, color: "#475569" }}>Posts: {platform.postCount}</Text>
-                <Text style={{ fontSize: 22, fontWeight: "700", color: "#0f172a" }}>
-                  {formatNumber(platform.totalViews)}
-                </Text>
-              </View>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+  const [currentPage, setCurrentPage] = useState(1)
 
-      <Card className="border-slate-300/70 bg-white/80 shadow-sm">
+  const totalPages = Math.max(1, Math.ceil(accounts.length / ACCOUNTS_PER_PAGE))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+
+  const paginatedAccounts = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * ACCOUNTS_PER_PAGE
+    return accounts.slice(startIndex, startIndex + ACCOUNTS_PER_PAGE)
+  }, [accounts, safeCurrentPage])
+
+  const startItem = accounts.length === 0 ? 0 : (safeCurrentPage - 1) * ACCOUNTS_PER_PAGE + 1
+  const endItem = Math.min(safeCurrentPage * ACCOUNTS_PER_PAGE, accounts.length)
+
+  return (
+    <div className="grid gap-4 w-full md:grid-cols-2 lg:grid-cols-3">
+      <Card className="border-border/80 bg-card/85 shadow-sm backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Top Content (By Views)</CardTitle>
         </CardHeader>
@@ -85,7 +63,7 @@ export function MonitoringDashboardPanel({
                   href={post.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="block rounded-lg border border-border/70 px-3 py-2 transition hover:bg-slate-50"
+                  className="block rounded-lg border border-border/80 bg-background/40 px-3 py-2 transition hover:bg-accent/50"
                 >
                   <p className="line-clamp-1 text-sm font-medium text-foreground">{post.title}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -98,9 +76,9 @@ export function MonitoringDashboardPanel({
         </CardContent>
       </Card>
 
-      <Card className="border-slate-300/70 bg-white/80 shadow-sm xl:col-span-2">
+      <Card className="border-border/80 bg-card/85 shadow-sm backdrop-blur-sm xl:col-span-2">
         <CardHeader>
-          <CardTitle>Account Monitoring Map</CardTitle>
+          <CardTitle>Account Monitoring</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -115,20 +93,64 @@ export function MonitoringDashboardPanel({
                 </tr>
               </thead>
               <tbody>
-                {accounts.map((account) => (
-                  <tr key={account.id} className="border-b border-border/50">
-                    <td className="py-3">
-                      <p className="font-medium text-foreground">{account.accountName}</p>
-                      <p className="text-xs text-muted-foreground">{account.username}</p>
+                {paginatedAccounts.length === 0 ? (
+                  <tr className="border-b border-border/50">
+                    <td colSpan={5} className="py-6 text-center text-sm text-muted-foreground">
+                      No accounts found.
                     </td>
-                    <td className="py-3 capitalize">{account.platform}</td>
-                    <td className="py-3">{account.postCount}</td>
-                    <td className="py-3">{formatNumber(account.totalViews)}</td>
-                    <td className="py-3">{formatDate(account.latestPostAt)}</td>
                   </tr>
-                ))}
+                ) : (
+                  paginatedAccounts.map((account) => (
+                    <tr key={account.id} className="border-b border-border/50">
+                      <td className="py-3">
+                        <p className="font-medium text-foreground">{account.accountName}</p>
+                        <p className="text-xs text-muted-foreground">{account.username}</p>
+                      </td>
+                      <td className="py-3 capitalize">{account.platform}</td>
+                      <td className="py-3">{account.postCount}</td>
+                      <td className="py-3">{formatNumber(account.totalViews)}</td>
+                      <td className="py-3">{formatDate(account.latestPostAt)}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              Showing {startItem}-{endItem} of {accounts.length} accounts
+            </p>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={safeCurrentPage === 1}
+                onClick={() => {
+                  setCurrentPage((previous) => Math.max(1, Math.min(previous, totalPages) - 1))
+                }}
+              >
+                Previous
+              </Button>
+
+              <span className="min-w-24 text-center text-xs text-muted-foreground">
+                Page {safeCurrentPage} / {totalPages}
+              </span>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={safeCurrentPage === totalPages}
+                onClick={() => {
+                  setCurrentPage((previous) => Math.min(totalPages, Math.min(previous, totalPages) + 1))
+                }}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

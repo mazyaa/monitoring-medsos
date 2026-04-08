@@ -20,22 +20,6 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Environment Variables
-
-Add these variables in your `.env.local` file to enable real Instagram data (reels/feed) using Meta Graph API:
-
-```bash
-INSTAGRAM_ACCESS_TOKEN=your_meta_graph_access_token
-INSTAGRAM_BUSINESS_ACCOUNT_ID=your_instagram_business_account_id
-YOUTUBE_API_KEY=your_youtube_data_api_key
-```
-
-Notes:
-
-- If `INSTAGRAM_ACCESS_TOKEN` and `INSTAGRAM_BUSINESS_ACCOUNT_ID` are not set, Instagram service falls back to dynamic mock data.
-- Instagram real API mode reads posts from the configured Business/Creator account and filters media to reels/feed.
-- Input query for Instagram is matched against the configured account username.
-
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

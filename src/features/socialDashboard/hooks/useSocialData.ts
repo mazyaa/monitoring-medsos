@@ -1,7 +1,8 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
 import { fetchSocialDashboard } from "../services/social-api.service"
 import {
@@ -56,10 +57,13 @@ function toPlatformErrorMap(results: PlatformResult[]): Partial<Record<PlatformK
   return normalizedErrors
 }
 
-export function useSocialData() {
-  const [submittedQueries, setSubmittedQueries] = useState<SocialRequestBody | null>(null)
-  const [hasSubmitted, setHasSubmitted] = useState(false)
+export function useSocialData(initialQueries: SocialRequestBody | null = null) {
+  const [submittedQueries, setSubmittedQueries] = useState<SocialRequestBody | null>(initialQueries)
+  const [hasSubmitted, setHasSubmitted] = useState(Boolean(initialQueries))
   const [validationError, setValidationError] = useState<string | null>(null)
+  const lastSuccessToastAt = useRef(0)
+  const lastErrorToastAt = useRef(0)
+  const lastValidationToastMessage = useRef<string | null>(null)
 
   const socialDataQuery = useQuery({
     queryKey: ["social-dashboard", submittedQueries],
@@ -73,6 +77,57 @@ export function useSocialData() {
     enabled: hasSubmitted && submittedQueries !== null,
   })
 
+  useEffect(() => {
+    if (!hasSubmitted) {
+      return
+    }
+
+    const latestSuccessAt = socialDataQuery.dataUpdatedAt
+
+    if (!latestSuccessAt || latestSuccessAt <= lastSuccessToastAt.current) {
+      return
+    }
+
+    lastSuccessToastAt.current = latestSuccessAt
+    const platformResults = socialDataQuery.data?.data || []
+
+    if (platformResults.length === 0) {
+      toast.info("Request completed but no social data was returned")
+      return
+    }
+
+    const failedPlatforms = platformResults.filter((result) => Boolean(result.error))
+
+    if (failedPlatforms.length === 0) {
+      toast.success("Social data fetched successfully")
+      return
+    }
+
+    if (failedPlatforms.length === platformResults.length) {
+      toast.error("Failed to fetch social data from all platforms")
+      return
+    }
+
+    toast.warning(
+      `Fetched with issues on ${failedPlatforms.map((result) => result.platform).join(", ")}`
+    )
+  }, [hasSubmitted, socialDataQuery.data, socialDataQuery.dataUpdatedAt])
+
+  useEffect(() => {
+    if (!hasSubmitted) {
+      return
+    }
+
+    const latestErrorAt = socialDataQuery.errorUpdatedAt
+
+    if (!latestErrorAt || latestErrorAt <= lastErrorToastAt.current) {
+      return
+    }
+
+    lastErrorToastAt.current = latestErrorAt
+    toast.error(socialDataQuery.error?.message || "Failed to fetch social dashboard data")
+  }, [hasSubmitted, socialDataQuery.error, socialDataQuery.errorUpdatedAt])
+
   const submitQuery = (input: SocialRequestBody) => {
     const parsed = socialRequestSchema.safeParse(input)
 
@@ -84,9 +139,18 @@ export function useSocialData() {
           ? INPUT_FIELD_LABELS[issuePath as keyof SocialRequestBody]
           : null
 
-      setValidationError(
-        issueFieldLabel ? `${issueFieldLabel}: ${firstIssue?.message}` : firstIssue?.message || "Please enter valid input"
-      )
+      const validationMessage =
+        issueFieldLabel
+          ? `${issueFieldLabel}: ${firstIssue?.message}`
+          : firstIssue?.message || "Please enter valid input"
+
+      setValidationError(validationMessage)
+
+      if (validationMessage !== lastValidationToastMessage.current) {
+        toast.info(validationMessage)
+        lastValidationToastMessage.current = validationMessage
+      }
+
       return false
     }
 
@@ -96,6 +160,7 @@ export function useSocialData() {
     }
 
     setValidationError(null)
+    lastValidationToastMessage.current = null
     setHasSubmitted(true)
     setSubmittedQueries(parsed.data)
     return true

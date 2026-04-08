@@ -8,9 +8,12 @@ import type { SocialRequestBody } from "../../types/social.types"
 
 type InputFormProps = {
   onSubmit: (queries: SocialRequestBody) => boolean | Promise<boolean>
-  onRefresh: () => void
+  onRefresh?: () => void | Promise<void>
   disabled?: boolean
   canRefresh?: boolean
+  showRefresh?: boolean
+  submitLabel?: string
+  initialQueries?: SocialRequestBody
   validationError?: string | null
 }
 
@@ -19,13 +22,18 @@ export function InputForm({
   onRefresh,
   disabled = false,
   canRefresh = false,
+  showRefresh = true,
+  submitLabel = "Fetch Data",
+  initialQueries,
   validationError,
 }: InputFormProps) {
-  const [queries, setQueries] = useState<SocialRequestBody>({
-    tiktokQuery: "",
-    youtubeQuery: "",
-    instagramQuery: "",
-  })
+  const [queries, setQueries] = useState<SocialRequestBody>(() =>
+    initialQueries || {
+      tiktokQuery: "",
+      youtubeQuery: "",
+      instagramQuery: "",
+    }
+  )
 
   const handleInputChange =
     (field: keyof SocialRequestBody) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,11 +81,25 @@ export function InputForm({
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button type="submit" size="lg" disabled={!canSubmit}>
-          Fetch Data
+          {submitLabel}
         </Button>
-        <Button type="button" size="lg" variant="outline" onClick={onRefresh} disabled={!canRefresh || disabled}>
-          Refresh
-        </Button>
+        {showRefresh ? (
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            onClick={() => {
+              if (!onRefresh) {
+                return
+              }
+
+              void onRefresh()
+            }}
+            disabled={!canRefresh || disabled}
+          >
+            Refresh
+          </Button>
+        ) : null}
       </div>
       {validationError ? <p className="text-sm text-destructive">{validationError}</p> : null}
     </form>

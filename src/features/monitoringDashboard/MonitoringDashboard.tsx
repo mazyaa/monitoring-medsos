@@ -1,11 +1,13 @@
 "use client"
 
+import { useMemo } from "react"
+
+import MagicBento from "@/components/MagicBento"
 import { Card, CardContent } from "@/components/ui/card"
 
 import { useMonitoringDashboard } from "./hooks/useMonitoringDashboard"
 import { MonitoringDashboardPanel } from "./components/MonitoringDashboardPanel"
 import { MonitoringHeaderBits } from "./components/MonitoringHeaderBits"
-import { MonitoringMetricBits } from "./components/MonitoringMetricBits"
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat("en-US", { notation: "compact" }).format(value)
@@ -14,8 +16,21 @@ function formatNumber(value: number): string {
 export function MonitoringDashboard() {
   const { data, isLoading, isFetching, error, refresh } = useMonitoringDashboard()
 
+  const bentoItems = useMemo(() => {
+    if (!data) {
+      return []
+    }
+
+    return data.platformBreakdown.map((platform) => ({
+      color: "#0b1220",
+      label: platform.platform.toUpperCase(),
+      title: `${platform.accountCount} accounts • ${platform.postCount} posts`,
+      description: `${formatNumber(platform.totalViews)} total views`,
+    }))
+  }, [data])
+
   return (
-    <section className="space-y-5">
+    <section className="space-y-4 sm:space-y-5">
       <MonitoringHeaderBits
         onRefresh={() => {
           void refresh()
@@ -33,7 +48,7 @@ export function MonitoringDashboard() {
       ) : null}
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Card className="h-28 animate-pulse bg-muted" />
           <Card className="h-28 animate-pulse bg-muted" />
           <Card className="h-28 animate-pulse bg-muted" />
@@ -42,21 +57,20 @@ export function MonitoringDashboard() {
 
       {data ? (
         <>
-          <div className="grid gap-4 md:grid-cols-3">
-            <MonitoringMetricBits
-              label="Total Accounts"
-              value={String(data.overview.totalAccounts)}
-              tone="slate"
-            />
-            <MonitoringMetricBits
-              label="Total Posts"
-              value={String(data.overview.totalPosts)}
-              tone="teal"
-            />
-            <MonitoringMetricBits
-              label="Total Views"
-              value={formatNumber(data.overview.totalViews)}
-              tone="amber"
+          <div className="rounded-2xl border border-slate-300/70 bg-slate-950/95 p-2 sm:p-3">
+            <MagicBento
+              items={bentoItems}
+              textAutoHide={true}
+              enableStars
+              enableSpotlight
+              enableBorderGlow={true}
+              enableTilt={false}
+              enableMagnetism={false}
+              clickEffect
+              spotlightRadius={400}
+              particleCount={12}
+              glowColor="132, 0, 255"
+              disableAnimations={false}
             />
           </div>
 
