@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model SocialAccount {
+  id              String   @id @default(cuid())
+  platform        String
+  externalId      String
+  username        String
+  accountName     String
+  profileImageUrl String
+  totalViews      Int      @default(0)
+  posts           Post[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([platform, externalId])
+  @@index([platform])
+  @@map("social_accounts")
+}
+
+model Post {
+  id              String        @id @default(cuid())
+  socialAccountId String
+  externalId      String
+  title           String
+  thumbnailUrl    String
+  publishedAt     DateTime
+  views           Int           @default(0)
+  url             String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([socialAccountId, externalId])
+  @@index([socialAccountId])
+  @@index([publishedAt])
+  @@map("posts")
+}

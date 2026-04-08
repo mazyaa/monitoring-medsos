@@ -1,0 +1,32 @@
+import { NextResponse } from "next/server"
+
+import { socialPlatformRequestSchema } from "@/server/services/social.schemas"
+import { youtubeService } from "@/server/services/youtube.service"
+
+export async function POST(request: Request) {
+  const payload = await request.json()
+  const parsed = socialPlatformRequestSchema.safeParse(payload)
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        message: parsed.error.issues[0]?.message || "Invalid request",
+      },
+      {
+        status: 400,
+      }
+    )
+  }
+
+  const result = await youtubeService.fetchByQuery(parsed.data.query)
+
+  return NextResponse.json(
+    {
+      success: result.data !== null,
+      data: result,
+    },
+    {
+      status: result.data ? 200 : 502,
+    }
+  )
+}
