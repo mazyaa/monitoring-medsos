@@ -1,8 +1,23 @@
 import { FetcherError, fetchJson } from "@/server/lib/fetcher"
 
 const APIFY_BASE_URL = (process.env.APIFY_BASE_URL || "https://api.apify.com/v2").replace(/\/$/, "")
-const DEFAULT_WAIT_TIMEOUT_MS = 120_000
-const DEFAULT_POLL_INTERVAL_MS = 2_000
+
+function toPositiveInt(value: string | undefined, fallback: number): number {
+  if (!value) {
+    return fallback
+  }
+
+  const normalized = Number(value)
+
+  if (!Number.isInteger(normalized) || normalized <= 0) {
+    return fallback
+  }
+
+  return normalized
+}
+
+const DEFAULT_WAIT_TIMEOUT_MS = toPositiveInt(process.env.APIFY_RUN_TIMEOUT_MS, 55_000)
+const DEFAULT_POLL_INTERVAL_MS = toPositiveInt(process.env.APIFY_RUN_POLL_INTERVAL_MS, 2_000)
 
 type ApifyApiEnvelope<T> = {
   data: T
