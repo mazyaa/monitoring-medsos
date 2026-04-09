@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       data: result,
     },
     {
-      status: 501,
+      status: result.data ? 200 : 502,
     }
   )
 }
