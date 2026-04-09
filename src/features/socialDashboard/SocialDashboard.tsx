@@ -26,7 +26,8 @@ export function SocialDashboard({
     isLoading,
     isFetching,
     submitQuery,
-    refresh,
+    refetchResults,
+    clearResults,
   } = useSocialData(initialQueries)
 
   const cardsAreLoading = isLoading || (isFetching && !requestError)
@@ -36,9 +37,11 @@ export function SocialDashboard({
       {showInputForm ? (
         <InputForm
           onSubmit={submitQuery}
-          onRefresh={refresh}
+          onRefetch={refetchResults}
+          onClearResults={clearResults}
           disabled={isLoading}
-          canRefresh={hasSubmitted}
+          canRefetch={hasSubmitted}
+          canClearResults={hasSubmitted}
           validationError={validationError}
           initialQueries={submittedQueries || undefined}
         />
@@ -73,18 +76,20 @@ export function SocialDashboard({
         </p>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {PLATFORM_ORDER.map((platform) => (
-          <SocialCard
-            key={platform}
-            platform={platform}
-            platformLabel={PLATFORM_LABELS[platform]}
-            data={data[platform]}
-            error={platformErrors?.[platform]}
-            isLoading={hasSubmitted ? cardsAreLoading : false}
-          />
-        ))}
-      </div>
+      {hasSubmitted ? (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {PLATFORM_ORDER.map((platform) => (
+            <SocialCard
+              key={platform}
+              platform={platform}
+              platformLabel={PLATFORM_LABELS[platform]}
+              data={data[platform]}
+              error={platformErrors?.[platform]}
+              isLoading={cardsAreLoading}
+            />
+          ))}
+        </div>
+      ) : null}
     </section>
   )
 }

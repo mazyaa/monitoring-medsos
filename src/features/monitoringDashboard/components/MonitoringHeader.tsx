@@ -19,13 +19,13 @@ function formatLastSync(value: string | null): string {
   }).format(new Date(value))
 }
 
-export function MonitoringHeaderBits({ onRefresh, refreshing, lastSyncAt }: MonitoringHeaderBitsProps) {
+export function MonitoringHeader({ onRefresh, refreshing, lastSyncAt }: MonitoringHeaderBitsProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-300/70 bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_60%,#334155_100%)] p-6 text-white shadow-lg">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Operational Social Monitoring</h2>
         <p className="max-w-2xl text-sm text-slate-100/90">
-          Pantau performa akun lintas platform langsung dari data database yang telah tersinkronisasi.
+          Monitor cross-platform account performance directly from synchronized database data.
         </p>
       </div>
 

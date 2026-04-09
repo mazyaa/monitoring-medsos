@@ -15,11 +15,9 @@ export function AppShell({ children, className }: AppShellProps) {
           speed={0.5}
           squareSize={40}
           direction="diagonal"
-          borderColor="#392e4e"
           hoverFillColor="#8400ff"
           shape="square"
           hoverTrailAmount={0}
-          className="opacity-50"
         />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(132,0,255,0.18),rgba(16,6,33,0.9)_42%,rgba(6,0,16,0.96))]" />
       </div>

@@ -166,7 +166,14 @@ export function useSocialData(initialQueries: SocialRequestBody | null = null) {
     return true
   }
 
-  const refresh = async () => {
+  const clearResults = () => {
+    setHasSubmitted(false)
+    setSubmittedQueries(null)
+    setValidationError(null)
+    lastValidationToastMessage.current = null
+  }
+
+  const refetchResults = async () => {
     if (!hasSubmitted) {
       return
     }
@@ -186,6 +193,7 @@ export function useSocialData(initialQueries: SocialRequestBody | null = null) {
     submittedQueries,
     validationError,
     submitQuery,
-    refresh,
+    refetchResults,
+    clearResults,
   }
 }

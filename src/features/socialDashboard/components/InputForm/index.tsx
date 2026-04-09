@@ -1,60 +1,84 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import type { SocialRequestBody } from "../../types/social.types"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { SocialRequestBody } from "../../types/social.types";
 
 type InputFormProps = {
-  onSubmit: (queries: SocialRequestBody) => boolean | Promise<boolean>
-  onRefresh?: () => void | Promise<void>
-  disabled?: boolean
-  canRefresh?: boolean
-  showRefresh?: boolean
-  submitLabel?: string
-  initialQueries?: SocialRequestBody
-  validationError?: string | null
-}
+  onSubmit: (queries: SocialRequestBody) => boolean | Promise<boolean>;
+  onRefetch?: () => void | Promise<void>;
+  onClearResults?: () => void | Promise<void>;
+  disabled?: boolean;
+  canRefetch?: boolean;
+  canClearResults?: boolean;
+  showRefetch?: boolean;
+  showClearResults?: boolean;
+  submitLabel?: string;
+  initialQueries?: SocialRequestBody;
+  validationError?: string | null;
+};
 
 export function InputForm({
   onSubmit,
-  onRefresh,
+  onRefetch,
+  onClearResults,
   disabled = false,
-  canRefresh = false,
-  showRefresh = true,
+  canRefetch = false,
+  canClearResults = false,
+  showRefetch = true,
+  showClearResults = true,
   submitLabel = "Fetch Data",
   initialQueries,
   validationError,
 }: InputFormProps) {
+  const resolveInitialQueries = (): SocialRequestBody => ({
+    tiktokQuery: initialQueries?.tiktokQuery || "",
+    youtubeQuery: initialQueries?.youtubeQuery || "",
+    instagramQuery: initialQueries?.instagramQuery || "",
+  });
+
   const [queries, setQueries] = useState<SocialRequestBody>(() =>
-    initialQueries || {
-      tiktokQuery: "",
-      youtubeQuery: "",
-      instagramQuery: "",
-    }
-  )
+    resolveInitialQueries(),
+  );
 
   const handleInputChange =
-    (field: keyof SocialRequestBody) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    (field: keyof SocialRequestBody) =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
       setQueries((previous) => ({
         ...previous,
         [field]: event.target.value,
-      }))
-    }
+      }));
+    };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+    event.preventDefault();
 
     if (disabled) {
-      return
+      return;
     }
 
-    await onSubmit(queries)
-  }
+    await onSubmit(queries);
+  };
+
+  const emptyQueries: SocialRequestBody = {
+    tiktokQuery: "",
+    youtubeQuery: "",
+    instagramQuery: "",
+  };
+
+  const handleClearInput = () => {
+    if (disabled) {
+      return;
+    }
+
+    setQueries(emptyQueries);
+  };
 
   const canSubmit =
-    Object.values(queries).every((query) => query.trim().length >= 2) && !disabled
+    Object.values(queries).every((query) => query.trim().length >= 2) &&
+    !disabled;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
@@ -79,29 +103,51 @@ export function InputForm({
         />
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Button type="submit" size="lg" disabled={!canSubmit}>
-          {submitLabel}
-        </Button>
-        {showRefresh ? (
+      <div className="flex pt-3 gap-3 flex-col justify-between lg:flex-row">
+        <div className="flex gap-3 flex-col lg:flex-row">
+          <Button type="submit" size="lg" disabled={!canSubmit}>
+            {submitLabel}
+          </Button>
+          {showRefetch ? (
+            <Button
+              type="button"
+              size="lg"
+              className="bg-green-600"
+              onClick={() => {
+                if (!onRefetch) {
+                  return;
+                }
+
+                void onRefetch();
+              }}
+              disabled={!canRefetch || disabled}
+            >
+              Refetch Data
+            </Button>
+          ) : null}
+        </div>
+        {showClearResults ? (
           <Button
             type="button"
             size="lg"
             variant="outline"
             onClick={() => {
-              if (!onRefresh) {
-                return
+              handleClearInput();
+              if (!onClearResults) {
+                return;
               }
 
-              void onRefresh()
+              void onClearResults();
             }}
-            disabled={!canRefresh || disabled}
+            disabled={!canClearResults || disabled}
           >
-            Refresh
+            Remove Results
           </Button>
         ) : null}
       </div>
-      {validationError ? <p className="text-sm text-destructive">{validationError}</p> : null}
+      {validationError ? (
+        <p className="text-sm text-destructive">{validationError}</p>
+      ) : null}
     </form>
-  )
+  );
 }

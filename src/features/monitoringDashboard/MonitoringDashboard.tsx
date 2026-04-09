@@ -7,31 +7,50 @@ import { Card, CardContent } from "@/components/ui/card"
 
 import { useMonitoringDashboard } from "./hooks/useMonitoringDashboard"
 import { MonitoringDashboardPanel } from "./components/MonitoringDashboardPanel"
-import { MonitoringHeaderBits } from "./components/MonitoringHeaderBits"
+import { MonitoringHeader } from "./components/MonitoringHeader"
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat("en-US", { notation: "compact" }).format(value)
 }
 
+const defaultBentoPlatforms = [
+  { key: "youtube", label: "YouTube", title: "YouTube" },
+  { key: "instagram", label: "Instagram", title: "Instagram" },
+  { key: "tiktok", label: "TikTok", title: "TikTok" },
+]
+
 export function MonitoringDashboard() {
   const { data, isLoading, isFetching, error, refresh } = useMonitoringDashboard()
 
   const bentoItems = useMemo(() => {
-    if (!data) {
-      return []
-    }
+    const platformMap = new Map(
+      (data?.platformBreakdown ?? []).map((platform) => [platform.platform.toLowerCase(), platform])
+    )
 
-    return data.platformBreakdown.map((platform) => ({
-      color: "#0b1220",
-      label: platform.platform.toUpperCase(),
-      title: `${platform.accountCount} accounts • ${platform.postCount} posts`,
-      description: `${formatNumber(platform.totalViews)} total views`,
-    }))
+    return defaultBentoPlatforms.map((defaultPlatform) => {
+      const platform = platformMap.get(defaultPlatform.key)
+
+      if (!platform) {
+        return {
+          color: "#0b1220",
+          label: defaultPlatform.label,
+          title: defaultPlatform.title,
+          description: "No synced account yet",
+        }
+      }
+
+      return {
+        color: "#0b1220",
+        label: defaultPlatform.label,
+        title: defaultPlatform.title,
+        description: `${platform.accountCount} accounts • ${platform.postCount} posts • ${formatNumber(platform.totalViews)} views`,
+      }
+    })
   }, [data])
 
   return (
     <section className="space-y-4 sm:space-y-5">
-      <MonitoringHeaderBits
+      <MonitoringHeader
         onRefresh={() => {
           void refresh()
         }}
