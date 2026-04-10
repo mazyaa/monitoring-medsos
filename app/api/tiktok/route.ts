@@ -3,6 +3,9 @@ import { NextResponse } from "next/server"
 import { socialPlatformRequestSchema } from "@/server/services/social.schemas"
 import { tiktokService } from "@/server/services/tiktok.service"
 
+export const runtime = "nodejs"
+export const maxDuration = 60
+
 export async function POST(request: Request) {
   const payload = await request.json()
   const parsed = socialPlatformRequestSchema.safeParse(payload)
@@ -26,7 +29,7 @@ export async function POST(request: Request) {
       data: result,
     },
     {
-      status: 501,
+      status: result.data ? 200 : 502,
     }
   )
 }

@@ -1,6 +1,5 @@
 import type { PlatformKey } from "../types/social.types"
 
-export const API_SOCIAL_ENDPOINT = "/api/social"
 export const MAX_CONTENT_ITEMS = 5
 
 export const PLATFORM_LABELS: Record<PlatformKey, string> = {

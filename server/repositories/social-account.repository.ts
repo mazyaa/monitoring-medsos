@@ -1,5 +1,5 @@
 import { prisma } from "@/server/lib/prisma"
-import type { PlatformKey } from "@/server/services/social.types"
+import type { PlatformKey } from "@/types/social"
 
 type PrismaModel = {
   upsert: (args: unknown) => Promise<unknown>
@@ -31,7 +31,7 @@ export type SocialAccountRecord = {
 export class SocialAccountRepository {
   constructor(private readonly prismaClient: PrismaClientLike = prisma as unknown as PrismaClientLike) {}
 
-  async upsert(input: UpsertSocialAccountInput): Promise<SocialAccountRecord | null> {
+  async upsertSocialAccount(input: UpsertSocialAccountInput): Promise<SocialAccountRecord | null> {
     const socialAccountModel = this.prismaClient.socialAccount
 
     if (!socialAccountModel?.upsert) {
@@ -75,5 +75,9 @@ export class SocialAccountRepository {
       // Keep API responses resilient even if Prisma schema has not been provisioned yet.
       return null
     }
+  }
+
+  async upsert(input: UpsertSocialAccountInput): Promise<SocialAccountRecord | null> {
+    return this.upsertSocialAccount(input)
   }
 }

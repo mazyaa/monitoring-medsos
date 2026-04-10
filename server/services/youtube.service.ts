@@ -1,67 +1,16 @@
-import { fetchJson } from "@/server/lib/fetcher"
 import { PostRepository } from "@/server/repositories/post.repository"
 import { SocialAccountRepository } from "@/server/repositories/social-account.repository"
-import type { PlatformResult, SocialContent, SocialPlatformData } from "@/server/services/social.types"
-
-type YouTubeSearchResponse = {
-  items?: Array<{
-    id?: { channelId?: string; videoId?: string }
-    snippet?: {
-      channelId?: string
-      channelTitle?: string
-      title?: string
-      publishedAt?: string
-      thumbnails?: {
-        default?: { url?: string }
-        medium?: { url?: string }
-        high?: { url?: string }
-      }
-    }
-  }>
-}
-
-type YouTubeChannelResponse = {
-  items?: Array<{
-    snippet?: {
-      title?: string
-      customUrl?: string
-      thumbnails?: {
-        default?: { url?: string }
-        medium?: { url?: string }
-        high?: { url?: string }
-      }
-    }
-    statistics?: {
-      viewCount?: string
-    }
-  }>
-}
-
-type YouTubeVideosResponse = {
-  items?: Array<{
-    id?: string
-    snippet?: {
-      title?: string
-      publishedAt?: string
-      thumbnails?: {
-        default?: { url?: string }
-        medium?: { url?: string }
-        high?: { url?: string }
-      }
-    }
-    statistics?: {
-      viewCount?: string
-    }
-  }>
-}
+import type { PlatformResult, SocialPlatformData } from "@/server/services/social.types"
+import { YouTubeProvider } from "@/server/services/providers/youtube.provider"
+import type { SocialPost, SocialProvider } from "@/types/social"
 
 type YouTubeServiceDependencies = {
+  provider?: SocialProvider
   socialAccountRepository?: SocialAccountRepository
   postRepository?: PostRepository
   maxContentItems?: number
 }
 
-const YOUTUBE_BASE_URL = "https://www.googleapis.com/youtube/v3"
 const DEFAULT_MAX_CONTENT_ITEMS = 5
 
 function toSafeNumber(value: unknown): number {
@@ -84,21 +33,30 @@ function toErrorMessage(error: unknown): string {
 }
 
 export class YouTubeService {
+  private readonly provider: SocialProvider
   private readonly socialAccountRepository: SocialAccountRepository
   private readonly postRepository: PostRepository
   private readonly maxContentItems: number
 
   constructor(dependencies: YouTubeServiceDependencies = {}) {
+    this.maxContentItems = dependencies.maxContentItems ?? DEFAULT_MAX_CONTENT_ITEMS
+    this.provider = dependencies.provider ?? new YouTubeProvider({ maxContentItems: this.maxContentItems })
     this.socialAccountRepository =
       dependencies.socialAccountRepository ?? new SocialAccountRepository()
     this.postRepository = dependencies.postRepository ?? new PostRepository()
-    this.maxContentItems = dependencies.maxContentItems ?? DEFAULT_MAX_CONTENT_ITEMS
   }
 
   async fetchByQuery(query: string): Promise<PlatformResult> {
     try {
-      const { data, channelId } = await this.fetchChannelData(query)
-      await this.persistSnapshot(channelId, data)
+      const [profile, stats, posts] = await Promise.all([
+        this.provider.getProfile(query),
+        this.provider.getStats(query),
+        this.provider.getPosts(query),
+      ])
+      const normalizedPosts = posts.slice(0, this.maxContentItems)
+      const data = this.toSocialPlatformData(profile, stats.totalViews, normalizedPosts)
+
+      await this.persistSnapshot(profile.externalId, data, normalizedPosts)
 
       return {
         platform: "youtube",
@@ -113,81 +71,36 @@ export class YouTubeService {
     }
   }
 
-  private async fetchChannelData(
-    query: string
-  ): Promise<{ channelId: string; data: SocialPlatformData }> {
-    const apiKey = process.env.YOUTUBE_API_KEY
-
-    if (!apiKey) {
-      throw new Error("Missing YOUTUBE_API_KEY environment variable")
-    }
-
-    const channelLookupUrl = `${YOUTUBE_BASE_URL}/search?part=snippet&type=channel&maxResults=1&q=${encodeURIComponent(
-      query
-    )}&key=${apiKey}`
-    const channelLookup = await fetchJson<YouTubeSearchResponse>(channelLookupUrl)
-
-    const matchedChannel = channelLookup.items?.[0]
-    const channelId = matchedChannel?.id?.channelId ?? matchedChannel?.snippet?.channelId
-
-    if (!channelId) {
-      throw new Error("No YouTube channel found for this input")
-    }
-
-    const channelDetailsUrl = `${YOUTUBE_BASE_URL}/channels?part=snippet,statistics&id=${channelId}&key=${apiKey}`
-    const latestVideosUrl = `${YOUTUBE_BASE_URL}/search?part=snippet&type=video&maxResults=${this.maxContentItems}&order=date&channelId=${channelId}&key=${apiKey}`
-
-    const [channelDetails, latestVideos] = await Promise.all([
-      fetchJson<YouTubeChannelResponse>(channelDetailsUrl),
-      fetchJson<YouTubeSearchResponse>(latestVideosUrl),
-    ])
-
-    const channelMeta = channelDetails.items?.[0]
-    const latestVideoIds = (latestVideos.items || [])
-      .map((item) => item.id?.videoId)
-      .filter((videoId): videoId is string => Boolean(videoId))
-
-    let videosWithStats: YouTubeVideosResponse = { items: [] }
-
-    if (latestVideoIds.length > 0) {
-      const videosStatsUrl = `${YOUTUBE_BASE_URL}/videos?part=snippet,statistics&id=${latestVideoIds.join(",")}&key=${apiKey}`
-      videosWithStats = await fetchJson<YouTubeVideosResponse>(videosStatsUrl)
-    }
-
-    const latestContents: SocialContent[] = (videosWithStats.items || []).map((video) => ({
-      id: video.id || "",
-      title: video.snippet?.title || "Untitled video",
-      thumbnailUrl:
-        video.snippet?.thumbnails?.medium?.url ||
-        video.snippet?.thumbnails?.high?.url ||
-        video.snippet?.thumbnails?.default?.url ||
-        "",
-      publishedAt: video.snippet?.publishedAt || new Date().toISOString(),
-      views: toSafeNumber(video.statistics?.viewCount || 0),
-      url: `https://www.youtube.com/watch?v=${video.id}`,
-    }))
-
+  private toSocialPlatformData(
+    profile: { accountName: string; username: string; profileImageUrl: string },
+    totalViews: number,
+    posts: SocialPost[]
+  ): SocialPlatformData {
     return {
-      channelId,
-      data: {
-        platform: "youtube",
-        accountName: channelMeta?.snippet?.title || matchedChannel?.snippet?.channelTitle || query,
-        username: channelMeta?.snippet?.customUrl || query,
-        profileImageUrl:
-          channelMeta?.snippet?.thumbnails?.high?.url ||
-          channelMeta?.snippet?.thumbnails?.medium?.url ||
-          channelMeta?.snippet?.thumbnails?.default?.url ||
-          "",
-        totalViews: toSafeNumber(channelMeta?.statistics?.viewCount || 0),
-        latestContents,
-      },
+      platform: "youtube",
+      accountName: profile.accountName,
+      username: profile.username,
+      profileImageUrl: profile.profileImageUrl,
+      totalViews: toSafeNumber(totalViews),
+      latestContents: posts.map((post) => ({
+        id: post.id,
+        title: post.caption,
+        thumbnailUrl: post.mediaUrl,
+        publishedAt: post.createdAt.toISOString(),
+        views: toSafeNumber(post.views || 0),
+        url: post.url || `https://www.youtube.com/watch?v=${post.id}`,
+      })),
     }
   }
 
-  private async persistSnapshot(channelId: string, data: SocialPlatformData): Promise<void> {
-    const savedAccount = await this.socialAccountRepository.upsert({
+  private async persistSnapshot(
+    externalId: string,
+    data: SocialPlatformData,
+    posts: SocialPost[]
+  ): Promise<void> {
+    const savedAccount = await this.socialAccountRepository.upsertSocialAccount({
       platform: "youtube",
-      externalId: channelId,
+      externalId,
       username: data.username,
       accountName: data.accountName,
       profileImageUrl: data.profileImageUrl,
@@ -198,7 +111,7 @@ export class YouTubeService {
       return
     }
 
-    await this.postRepository.replaceLatestByAccountId(savedAccount.id, data.latestContents)
+    await this.postRepository.savePosts(savedAccount.id, posts)
   }
 }
 
