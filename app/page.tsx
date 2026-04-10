@@ -12,7 +12,7 @@ export default function Home() {
               Live Scraping Workspace
             </p>
             <h2 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-              Social Input & Dashboard
+              Input Usernames Social Media
             </h2>
           </div>
 
