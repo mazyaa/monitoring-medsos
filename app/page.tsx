@@ -9,7 +9,7 @@ export default function Home() {
         <section className="space-y-4 rounded-xl border border-border/70 bg-card/65 p-4 shadow-sm backdrop-blur-sm sm:p-5">
           <div>
             <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-              Live Scraping Workspace
+              Scraping Workspace
             </p>
             <h2 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
               Input Usernames Social Media
